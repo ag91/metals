@@ -235,6 +235,34 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "class-method",
+    """|
+       |class X() {}
+       |trait Main {
+       |  def main() = {
+       |    val x = new X()
+       |    val a = true
+       |    val b = "test"
+       |    x.<<otherMethod>>(a, b, 1)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|class X() {
+       |  def otherMethod(arg0: Boolean, arg1: String, arg2: Int) = ???
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val x = new X()
+       |    val a = true
+       |    val b = "test"
+       |    x.otherMethod(a, b, 1)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
