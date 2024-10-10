@@ -214,27 +214,26 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
   //      |""".stripMargin
   // )
 
-  // TODO not supported yet
-  // checkEdit(
-  //   "lambda-generic",
-  //   """|
-  //      |trait Main {
-  //      |  def main() = {
-  //      |    val list = List(1, 2, 3)
-  //      |    list.map(<<otherMethod>>)
-  //      |  }
-  //      |}
-  //      |
-  //      |""".stripMargin,
-  //   """|trait Main {
-  //      |  def main() = {
-  //      |    val list = List(1, 2, 3)
-  //      |    def otherMethod(arg0: Int) = ???
-  //      |    list.map(otherMethod)
-  //      |  }
-  //      |}
-  //      |""".stripMargin,
-  // )
+  checkEdit(
+    "lambda-generic",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    val list = List(1, 2, 3)
+       |    list.map(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def main() = {
+       |    val list = List(1, 2, 3)
+       |    def otherMethod(arg0: Int) = ???
+       |    list.map(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
 
   def checkEdit(
       name: TestOptions,

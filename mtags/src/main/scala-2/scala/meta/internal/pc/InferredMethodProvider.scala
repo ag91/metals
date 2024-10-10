@@ -202,8 +202,38 @@ final class InferredMethodProvider(
             } else {
               Nil
             }
+          // val list = List(1,2,3)
+          // list.map(nonExistent)
+          case (Ident(nonExistent)) :: Apply(
+                Select(Ident(argumentList), _),
+                _ :: Nil
+              ) :: _ =>
+            // need to find the type of the value on which we are mapping
+            val listSymbol = context.lookupSymbol(argumentList, _ => true)
+            if (listSymbol.isSuccess) {
+              listSymbol.symbol.tpe match {
+                case TypeRef(_, _, TypeRef(_, inputType, _) :: Nil) =>
+                  val lastApplyPos = insertPosition()
+                  val indentString =
+                    indentation(params.text(), lastApplyPos.start - 1)
+
+                  val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
+                  val full =
+                    s"def ${errorMethod.name}($paramsString) = ???\n$indentString"
+                  val methodInsertPosition = lastApplyPos.toLsp
+                  methodInsertPosition.setEnd(
+                    methodInsertPosition.getStart()
+                  )
+
+                  new TextEdit(
+                    methodInsertPosition,
+                    full
+                  ) :: additionalImports
+                case _ => Nil
+              }
+            } else Nil
           case other =>
-            // pprint.log(other)
+            pprint.log(other)
             Nil
         }
       case _ =>
