@@ -159,7 +159,6 @@ final class InferredMethodProvider(
                 arguments
               ) :: _ =>
             val methodSymbol = context.lookupSymbol(containingMethod, _ => true)
-
             if (methodSymbol.isSuccess) {
               val retIndex = arguments.indexWhere(_.pos.includes(pos))
               methodSymbol.symbol.tpe match {
@@ -204,7 +203,7 @@ final class InferredMethodProvider(
             }
           // val list = List(1,2,3)
           // list.map(nonExistent)
-          case (Ident(nonExistent)) :: Apply(
+          case (Ident(_)) :: Apply(
                 Select(Ident(argumentList), _),
                 _ :: Nil
               ) :: _ =>
@@ -235,6 +234,70 @@ final class InferredMethodProvider(
           case other =>
             pprint.log(other)
             Nil
+        }
+      case errorMethod: Select if errorMethod.isErroneous =>
+        lastVisitedParentTrees match {
+          // class X{}
+          // val x: X = ???
+          // x.nonExistent(1,true,"string")
+          case Select(Ident(container), _) :: _ =>
+            // pprint.log(lastVisitedParentTrees)
+            // we need to get the type of the container of our undefined method
+            val containerSymbol = context.lookupSymbol(container, _ => true)
+            if (containerSymbol.isSuccess) {
+              containerSymbol.symbol.tpe match {
+                case TypeRef(_, classSymbol, _) =>
+                  // TODO we need to get the position of the container
+                  // class because we want to add the method
+                  // definition there
+                  //
+
+                  // pprint.log(classSymbol)
+                  val classs = context.lookupSymbol(classSymbol.name, _ => true)
+                  // this gives me the position of the class, but what about its body
+                  typedTreeAt(classs.symbol.pos) match {
+                    case ClassDef(
+                          _,
+                          _,
+                          _,
+                          Template(
+                            _,
+                            _,
+                            DefDef(
+                              _,
+                              _,
+                              _,
+                              _,
+                              _,
+                              Block(Apply(block, _) :: _, _)
+                            ) :: _
+                          )
+                        ) =>
+                      val containerBlockPosition: Position =
+                        block.pos.withPoint(
+                          block.pos.point + 4
+                        ) // TODO totally arbitrary, I couldn't find a way to get the empty content in case of class X() {}
+                      // val lastApplyPos = insertPosition()
+                      // val indentString =
+                      //   indentation(params.text(), lastApplyPos.start - 1)
+                      // TODO we also need to get the types of the parameters
+                      val full =
+                        s"\ndef ${errorMethod.name}(paramsString) = ???\nindentString"
+                      val methodInsertPosition = containerBlockPosition.toLsp
+                      methodInsertPosition.setEnd(
+                        methodInsertPosition.getStart()
+                      )
+                      new TextEdit(
+                        methodInsertPosition,
+                        full
+                      ) :: additionalImports
+                    case _ => Nil
+                  }
+                case _ => Nil
+              }
+            } else
+              Nil
+          case _ => Nil
         }
       case _ =>
         Nil
